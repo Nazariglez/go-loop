@@ -26,8 +26,18 @@ func NewLoop(fps float64) Loop {
 }
 
 func (loop *Loop) SetFPS(fps float64) {
+  restart := false
+  if loop.IsRunning {
+    loop.Stop()
+    restart = true
+  }
+
   loop.fps = fps
   loop.nanoFps = time.Duration((1/fps)*1e9)*time.Nanosecond
+
+  if restart {
+    loop.Start()
+  }
 }
 
 func (loop *Loop) Start() {
@@ -35,6 +45,7 @@ func (loop *Loop) Start() {
     return
   }
 
+  loop.last = time.Now().UnixNano()
   loop.IsRunning = true
   loop.ticker = time.NewTicker(loop.nanoFps)
 
@@ -43,11 +54,11 @@ func (loop *Loop) Start() {
 
     for _ = range loop.ticker.C {
       now = time.Now().UnixNano()
-      loop.time += (now-loop.last)/1000
+      loop.time += (now-loop.last)
       delta = loop.time -loop.lastTime
       loop.lastTime = loop.time
       loop.last = now
-      loop.Tick <- float64(delta)/1e6
+      loop.Tick <- float64(delta)/1e9
     }
   }()
 }
