@@ -14,12 +14,12 @@ type Loop struct {
 	IsRunning            bool
 	ticker               *time.Ticker
 	last, lastTime, time int64
-	Tick                 chan float64
+	Tick                 func (delta float64)
 }
 
 func NewLoop(fps float64) Loop {
 	loop := Loop{
-		Tick: make(chan float64),
+		Tick: func (delta float64) {},
 	}
 	loop.SetFPS(fps)
 	return loop
@@ -58,7 +58,7 @@ func (loop *Loop) Start() {
 			delta = loop.time - loop.lastTime
 			loop.lastTime = loop.time
 			loop.last = now
-			loop.Tick <- float64(delta) / 1e9
+			loop.Tick(float64(delta) / 1e9)
 		}
 	}()
 }
