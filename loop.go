@@ -6,12 +6,14 @@ package loop
 
 import (
 	"time"
+	"sync"
 )
 
 type Loop struct {
+	sync.Mutex
 	fps                  float64
 	nanoFps              time.Duration
-	IsRunning            bool
+	isRunning            bool
 	ticker               *time.Ticker
 	last, lastTime, time int64
 	Tick                 func (delta float64)
@@ -25,10 +27,13 @@ func NewLoop(fps float64) Loop {
 	return loop
 }
 
+
+
 func (loop *Loop) SetFPS(fps float64) {
+	loop.Lock()
 	restart := false
-	if loop.IsRunning {
-		loop.Stop()
+	if loop.isRunning {
+		loop.stop()
 		restart = true
 	}
 
@@ -36,17 +41,18 @@ func (loop *Loop) SetFPS(fps float64) {
 	loop.nanoFps = time.Duration((1/fps)*1e9) * time.Nanosecond
 
 	if restart {
-		loop.Start()
+		loop.start()
 	}
+	loop.Unlock()
 }
 
-func (loop *Loop) Start() {
-	if loop.IsRunning {
+func (loop *Loop) start() {
+	if loop.isRunning {
 		return
 	}
 
 	loop.last = time.Now().UnixNano()
-	loop.IsRunning = true
+	loop.isRunning = true
 	loop.ticker = time.NewTicker(loop.nanoFps)
 
 	go func() {
@@ -63,11 +69,29 @@ func (loop *Loop) Start() {
 	}()
 }
 
-func (loop *Loop) Stop() {
-	if !loop.IsRunning {
+func (loop *Loop) stop() {
+	if !loop.isRunning {
 		return
 	}
 
 	loop.ticker.Stop()
-	loop.IsRunning = false
+	loop.isRunning = false
+}
+
+func (loop *Loop) Start() {
+	loop.Lock()
+	loop.start()
+	loop.Unlock()
+}
+
+func (loop *Loop) Stop() {
+	loop.Lock()
+	loop.stop()
+	loop.Unlock()
+}
+
+func (loop *Loop) IsRunning() bool {
+	loop.Lock()
+	defer loop.Unlock()
+	return loop.isRunning
 }
