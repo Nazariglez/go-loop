@@ -59,11 +59,13 @@ func (loop *Loop) start() {
 		var now, delta int64
 
 		for _ = range loop.ticker.C {
+			loop.Lock()
 			now = time.Now().UnixNano()
 			loop.time += (now - loop.last)
 			delta = loop.time - loop.lastTime
 			loop.lastTime = loop.time
 			loop.last = now
+			loop.Unlock()
 			loop.Tick(float64(delta) / 1e9)
 		}
 	}()
